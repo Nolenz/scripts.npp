@@ -220,12 +220,8 @@
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
-    <PostBuildEvent>copy NppScripts.dll "C:\Program Files\Notepad++\plugins\NppScripts\NppScripts.dll"
-copy NppScripts.xml "C:\Program Files\Notepad++\plugins\NppScripts\NppScripts.xml"
-copy $(TargetName).dll "C:\Program Files\Notepad++\plugins\NppScripts\NppScripts\NppScripts.asm.dll"
-copy CSScriptLibrary.dll "C:\Program Files\Notepad++\plugins\NppScripts\NppScripts\CSScriptLibrary.dll"
-copy CSScriptLibrary.xml "C:\Program Files\Notepad++\plugins\NppScripts\NppScripts\CSScriptLibrary.xml"
-copy "NppScripts\samples.zip" "C:\Program Files\Notepad++\plugins\NppScripts\NppScripts\samples.zip"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>
