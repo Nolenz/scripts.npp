@@ -20,7 +20,7 @@ namespace NppScripts
             RefreshScriptsList();
             RefreshControls();
 
-            Npp.Editor.SaveCurrentFile();
+            //Npp.Editor.SaveCurrentFile();
         }
 
         //refresh available scripts
@@ -82,7 +82,7 @@ namespace NppScripts
                 else
                     try
                     {
-                        Npp.Editor.SaveCurrentFile();
+                        //Npp.Editor.SaveCurrentFile();
 
                         if (!Plugin.ExecuteScriptByFileName(SelectedScript.File))
                         {
@@ -136,8 +136,11 @@ namespace NppScripts
 
                 index++;
 
+                // The new script will use the contents of "TEMPLATE.cs" in the script directory, if it exists.
                 string newScript = Path.Combine(Plugin.ScriptsDir, string.Format("Npp.{0:000}.{1}.cs", index, NormalizeScriptName(input.ScriptName)));
-                File.WriteAllText(newScript, defaultScriptCode.Replace("{$ScriptName}", input.ScriptName));
+                string templatePath = Path.Combine(Plugin.ScriptsDir, "TEMPLATE.cs");
+                if (File.Exists(templatePath)) File.WriteAllText(newScript, File.ReadAllText(templatePath).Replace("{$ScriptName}", input.ScriptName));
+                else File.WriteAllText(newScript, defaultScriptCode.Replace("{$ScriptName}", input.ScriptName));
 
                 RefreshScriptsList();
                 SelectScript(newScript);
