@@ -25,6 +25,12 @@ namespace NppScripts
     {
         static Output output = new Output();
 
+        // Regex to match lines like "//css_inc Utils/whatever.cs"
+        // Group 1 is drive letter, if not present use relative path to scripts dir.
+        // Group 2 is path.
+        // Group 3 is file pattern.
+        static Regex includedFilesPattern = new Regex(@"^\/\/css_inc (.:\\|\\)?(.*\\)?(.*)", RegexOptions.Multiline);
+
         static public Output Output { get { return output; } }
 
         internal static IntPtr SendMenuCmd(IntPtr hWnd, NppMenuCmd wParam, int lParam)
@@ -180,9 +186,31 @@ namespace NppScripts
             return ExecuteScript(script);
         }
 
+        static DateTime GetLastModified(ScriptInfo scriptInfo)
+        {
+            // Check time against all included cs files.
+            // This allows you to modify included files and still have
+            // the script pick up the changes without restarting.
+            List<string> allFiles = new List<string>() { scriptInfo.File };
+            string scriptTxt = File.ReadAllText(scriptInfo.File);
+            MatchCollection matches = includedFilesPattern.Matches(scriptTxt);
+            foreach (Match ii in matches)
+            {
+                string drive = ii.Groups[1].ToString();
+                string folder = ii.Groups[2].ToString();
+                string filePattern = ii.Groups[3].ToString();
+
+                // Choose absolute path or relative path.
+                string path = Path.Combine(drive.Length != 0 ? drive : ScriptsDir, folder);
+                allFiles.AddRange(Directory.GetFiles(path, filePattern));
+            }
+            return allFiles.Select(x => File.GetLastWriteTime(x)).Aggregate((x, y) => x > y ? x : y);
+        }
+
         static NppScript EnsureScriptLoaded(ScriptInfo scriptInfo)
         {
-            if (File.GetLastWriteTime(scriptInfo.File) != scriptInfo.LastModified || scriptInfo.Script is NppScriptStub)
+            DateTime lastModified = GetLastModified(scriptInfo);
+            if (lastModified != scriptInfo.LastModified || scriptInfo.Script is NppScriptStub)
             {
                 scriptInfo.Script = LoadScript(scriptInfo.File, scriptInfo.Id);
 
@@ -190,8 +218,7 @@ namespace NppScripts
                 scriptInfo.Script.ScriptId = scriptInfo.Id;
                 scriptInfo.Script.Name = scriptInfo.Name;
                 scriptInfo.Script.Tag = scriptInfo.Tag;
-
-                scriptInfo.LastModified = File.GetLastWriteTime(scriptInfo.File);
+                scriptInfo.LastModified = lastModified;
             }
             return scriptInfo.Script;
         }
