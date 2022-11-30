@@ -119,6 +119,7 @@
       <DependentUpon>ScriptManager.Any.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ScriptPreprocessor.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="CSScriptLibrary, Version=3.30.0.0, Culture=neutral, PublicKeyToken=70fcc3d18c749033, processorArchitecture=MSIL">

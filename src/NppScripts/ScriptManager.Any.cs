@@ -95,7 +95,7 @@ namespace NppScripts
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Error: " + ex, "Notepad++ Automation");
+                        MessageBox.Show("Error: " + ex + "\nStack Trace:\n" + ex.StackTrace, "Notepad++ Automation");
                     }
             }
             else

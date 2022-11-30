@@ -25,12 +25,6 @@ namespace NppScripts
     {
         static Output output = new Output();
 
-        // Regex to match lines like "//css_inc Utils/whatever.cs"
-        // Group 1 is drive letter, if not present use relative path to scripts dir.
-        // Group 2 is path.
-        // Group 3 is file pattern.
-        static Regex includedFilesPattern = new Regex(@"^\/\/css_inc (.:\\|\\)?(.*\\)?(.*)", RegexOptions.Multiline);
-
         static public Output Output { get { return output; } }
 
         internal static IntPtr SendMenuCmd(IntPtr hWnd, NppMenuCmd wParam, int lParam)
@@ -191,19 +185,7 @@ namespace NppScripts
             // Check time against all included cs files.
             // This allows you to modify included files and still have
             // the script pick up the changes without restarting.
-            List<string> allFiles = new List<string>() { scriptInfo.File };
-            string scriptTxt = File.ReadAllText(scriptInfo.File);
-            MatchCollection matches = includedFilesPattern.Matches(scriptTxt);
-            foreach (Match ii in matches)
-            {
-                string drive = ii.Groups[1].ToString();
-                string folder = ii.Groups[2].ToString();
-                string filePattern = ii.Groups[3].ToString();
-
-                // Choose absolute path or relative path.
-                string path = Path.Combine(drive.Length != 0 ? drive : ScriptsDir, folder);
-                allFiles.AddRange(Directory.GetFiles(path, filePattern));
-            }
+            List<string> allFiles = scriptInfo.GetAllFiles();
             return allFiles.Select(x => File.GetLastWriteTime(x)).Aggregate((x, y) => x > y ? x : y);
         }
 
@@ -212,7 +194,7 @@ namespace NppScripts
             DateTime lastModified = GetLastModified(scriptInfo);
             if (lastModified != scriptInfo.LastModified || scriptInfo.Script is NppScriptStub)
             {
-                scriptInfo.Script = LoadScript(scriptInfo.File, scriptInfo.Id);
+                scriptInfo.Script = LoadScript(scriptInfo);
 
                 scriptInfo.Script.ScriptFile = scriptInfo.File;
                 scriptInfo.Script.ScriptId = scriptInfo.Id;
@@ -305,16 +287,21 @@ namespace NppScripts
             return createObject(assembly, name);
         }
 
-        static NppScript LoadScript(string file, int id)
+        static NppScript LoadScript(ScriptInfo scriptInfo)
         {
             try
             {
                 CSScriptIntegration.ClearBuildError();
-
                 CSScript.CacheEnabled = true;
                 bool debugScript = true;
 
-                string asmFile = CSScript.CompileFile(file, null, debugScript, Assembly.GetExecutingAssembly().Location);
+                ScriptPreprocessor processed = new ScriptPreprocessor(scriptInfo);
+                string asmFile = "";
+                processed.Do(() =>
+                {
+                    asmFile = CSScript.CompileFile(scriptInfo.File, null, debugScript, Assembly.GetExecutingAssembly().Location);
+                });
+
                 string debugSymbols = Path.ChangeExtension(asmFile, ".pdb");
 
                 Assembly asm;
@@ -326,8 +313,8 @@ namespace NppScripts
                 object script = CreateObject(asm, "Script");
 
                 var retval = (NppScript)script;
-                retval.ScriptFile = file;
-                retval.ScriptId = id;
+                retval.ScriptFile = scriptInfo.File;
+                retval.ScriptId = scriptInfo.Id;
                 retval.OnLoaded();
 
                 return retval;
@@ -336,20 +323,19 @@ namespace NppScripts
             {
                 if (DialogResult.Yes == MessageBox.Show("The Script is locked. Restarting Notepad++ will release it.\nDo you want to restart it now?", "Notepad++ Automation", MessageBoxButtons.YesNo))
                 {
-                    var proc = System.Diagnostics.Process.GetProcessById(55);
                     ScriptManager.RestartNpp();
                 }
             }
             catch (Exception e)
             {
                 //MessageBox.Show("Script '" + file + "' is invalid.\n" + e.Message, "Notepad++ Automation");
-                CSScriptIntegration.ShowBuildError("Script '" + file + "' is invalid.\n" + e.Message);
+                CSScriptIntegration.ShowBuildError("Script '" + scriptInfo.File + "' is invalid.\n" + e.Message + "\n" + e.StackTrace);
             }
 
             return new NppScriptStub
             {
-                ScriptFile = file,
-                ScriptId = id
+                ScriptFile = scriptInfo.File,
+                ScriptId = scriptInfo.Id
             };
         }
 
