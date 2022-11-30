@@ -1,8 +1,10 @@
+using CSScriptLibrary;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -269,30 +271,13 @@ namespace NppScripts
             return path;
         }
 
-
-        // Regex to match lines like "//css_inc Utils/whatever.cs"
-        // Group 1 is drive letter, if not present use relative path to scripts dir.
-        // Group 2 is path.
-        // Group 3 is file pattern.
-        static Regex includedFilesPattern = new Regex(@"^\/\/css_inc (.:\\|\\)?(.*\\)?(.*)", RegexOptions.Multiline);
         // Return this script file as well as all files that are //cs_inc'd to it.
-        // TODO Does not chain load recursively, but I personally don't really need it to.
-        // TODO See GenerateVSProjectFor, could use that parser to get all files instead.
         public List<string> GetAllFiles()
         {
             List<string> allFiles = new List<string>() { File };
-            string scriptTxt = System.IO.File.ReadAllText(File);
-            MatchCollection matches = includedFilesPattern.Matches(scriptTxt);
-            foreach (Match ii in matches)
-            {
-                string drive = ii.Groups[1].ToString();
-                string folder = ii.Groups[2].ToString();
-                string filePattern = ii.Groups[3].ToString();
-
-                // Choose absolute path or relative path.
-                string path = Path.Combine(drive.Length != 0 ? drive : Plugin.ScriptsDir, folder);
-                allFiles.AddRange(Directory.GetFiles(path, filePattern));
-            }
+            List<string> searchDirs = new List<string> { Plugin.ScriptsDir, Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) };
+            ScriptParser parser = new ScriptParser(File, searchDirs.ToArray(), false);
+            allFiles.AddRange(parser.ImportedFiles);
             return allFiles;
         }
     }
