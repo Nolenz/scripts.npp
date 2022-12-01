@@ -73,7 +73,7 @@ namespace NppScripts
         }
 
 
-        private static readonly Regex wrapTryCatchPattern = new Regex(@"(public override void Run\(\)\s+{)(.*)(\r?\n    })", RegexOptions.Singleline);
+        private static readonly Regex wrapTryCatchPattern = new Regex(@"(public override void Run\(\)\s+{)(.*?)(\r?\n    })", RegexOptions.Singleline);
         private static readonly string tryStr = "try {";
         private static readonly string catchStr = "} catch (System.Exception e) {System.Windows.Forms.MessageBox.Show(e.Message + \"\\n\" + e.StackTrace); }";
         /// <summary>
